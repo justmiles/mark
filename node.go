@@ -1,7 +1,10 @@
 package mark
 
 import (
+	"bytes"
 	"fmt"
+	"html"
+	"io"
 	"regexp"
 	"strconv"
 	"strings"
@@ -200,15 +203,23 @@ type CodeNode struct {
 }
 
 // Return the html representation of codeBlock
-func (n *CodeNode) Render() string {
-	var attr string
-	if n.Lang != "" {
-		attr = fmt.Sprintf(" class=\"lang-%s\"", n.Lang)
+func (p *CodeNode) Render() (s string) {
+	lineCount, _ := lineCounter(p.Text)
+	s += `<ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="8f7842af-1a72-4902-89a1-2d4ed6d6c70d">`
+	s += `<ac:parameter ac:name="theme">DJango</ac:parameter>`
+	if lineCount > 5 {
+		s += `<ac:parameter ac:name="linenumbers">true</ac:parameter>`
 	}
-	code := fmt.Sprintf("<%[1]s%s>%s</%[1]s>", "code", attr, n.Text)
-	return wrap("pre", code)
+	if lineCount > 30 {
+		s += `<ac:parameter ac:name="collapse">true</ac:parameter>`
+	}
+	if p.Lang != "" {
+		s += fmt.Sprintf(`<ac:parameter ac:name="language">%s</ac:parameter>`, p.Lang)
+	}
+	s += fmt.Sprintf(`<ac:plain-text-body><![CDATA[%s]]></ac:plain-text-body>`, html.UnescapeString(p.Text))
+	s += `</ac:structured-macro>`
+	return s
 }
-
 func (p *parse) newCode(pos Pos, lang, text string) *CodeNode {
 	// DRY: see `escape()` below
 	text = strings.NewReplacer("<", "&lt;", ">", "&gt;", "\"", "&quot;", "&", "&amp;").Replace(text)
@@ -611,4 +622,24 @@ func smartyfractions(text string) string {
 				match[1], strings.Replace(match[2], "/", "", 1))
 		}
 	})
+}
+
+func lineCounter(s string) (int, error) {
+	r := strings.NewReader(s)
+	buf := make([]byte, 32*1024)
+	count := 0
+	lineSep := []byte{'\n'}
+
+	for {
+		c, err := r.Read(buf)
+		count += bytes.Count(buf[:c], lineSep)
+
+		switch {
+		case err == io.EOF:
+			return count, nil
+
+		case err != nil:
+			return count, err
+		}
+	}
 }
