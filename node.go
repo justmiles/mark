@@ -111,7 +111,7 @@ type HrNode struct {
 
 // Render returns the html representation of hr.
 func (n *HrNode) Render() string {
-	return "<hr>"
+	return "<hr />"
 }
 
 func (p *parse) newHr(pos Pos) *HrNode {
@@ -126,7 +126,7 @@ type BrNode struct {
 
 // Render returns the html representation of line-break.
 func (n *BrNode) Render() string {
-	return "<br>"
+	return "<br />"
 }
 
 func (p *parse) newBr(pos Pos) *BrNode {
